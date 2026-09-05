@@ -53,6 +53,7 @@
     "onlineEmptyTitle": "No players online",
     "onlineEmptyDesc": "Players appear here when they connect.",
     "rosterHealthTooltip": "Health: {{health}}%",
+    "rosterPingTooltip": "Ping: {{ping}} ms",
     "seePreviouslySeen_one": "See {{count}} previously seen player",
     "seePreviouslySeen_other": "See {{count}} previously seen players",
     "reviewBanned_one": "Review {{count}} banned SteamID",

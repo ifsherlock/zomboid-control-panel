@@ -71,6 +71,7 @@ function FakePlayer:isAlive() return true end
 function FakePlayer:isAsleep() return false end
 function FakePlayer:isSneaking() return false end
 function FakePlayer:isRunning() return false end
+function FakePlayer:getPing() return 137 end
 function FakePlayer:getStats() return FakeStats end
 function FakePlayer:getBodyDamage() return FakeBodyDamage end
 
@@ -94,6 +95,7 @@ describe('PanelBridge.lua getPlayerDetails/getAllPlayerDetails -- real stats via
     expect(result.data.username).toBe('Fielder');
     expect(result.data.x).toBe(100);
     expect(result.data.accessLevel).toBe('admin');
+    expect(result.data.ping).toBe(137);
 
     // Before this fix: hunger/thirst/fatigue/boredom/unhappiness/pain were
     // believed absent forever (no named getter exists) and were never
@@ -119,6 +121,7 @@ describe('PanelBridge.lua getPlayerDetails/getAllPlayerDetails -- real stats via
     const row = result.data.players[0];
     expect(row.error).toBeUndefined();
     expect(row.username).toBe('Fielder');
+    expect(row.ping).toBe(137);
     expect(row.hunger).toBe(0.4);
     expect(row.thirst).toBe(0.1);
     expect(row.fatigue).toBe(0.2);
@@ -139,6 +142,17 @@ FakeStatValues.HUNGER = nil
     expect('hunger' in result.data.stats).toBe(false);
     expect(result.data.stats.thirst).toBe(0.1);
     expect(result.data.username).toBe('Fielder');
+  });
+
+  it('getPlayerDetails: an unavailable or negative ping is honestly omitted', () => {
+    const bridge = loadPanelBridge(LUA_PATH, STUBS + `
+function FakePlayer:getPing() return -1 end
+`);
+    const result = bridge.callHandler('getPlayerDetails', { username: 'Fielder' });
+
+    expect(result.ok).toBe(true);
+    expect(result.data.username).toBe('Fielder');
+    expect(result.data.ping).toBeUndefined();
   });
 
   it('getPlayerDetails: CharacterStat itself missing on some future build degrades stats honestly, without taking down the rest (defensive guard on the enum lookup, not just the method call)', () => {

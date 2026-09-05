@@ -1289,6 +1289,17 @@ local function getPlayerByUsername(username)
     return nil
 end
 
+-- Build 42 exposes the live per-player round-trip time on IsoPlayer. Keep
+-- this optional so the bridge still returns the rest of a player row on an
+-- older or future build where the getter is absent or not ready yet.
+local function getPlayerPing(player)
+    local ping = PanelBridge.tryGet(player, "getPing")
+    if type(ping) ~= "number" or ping < 0 then
+        return nil
+    end
+    return math.floor(ping + 0.5)
+end
+
 -- ============================================
 -- FILE OPERATIONS
 -- ============================================
@@ -2169,6 +2180,7 @@ handlers.getServerInfo = function(args)
                         x = math.floor(player:getX() or 0),
                         y = math.floor(player:getY() or 0),
                         z = math.floor(player:getZ() or 0),
+                        ping = getPlayerPing(player),
                         health = health,
                         isAlive = player:isAlive(),
                         isInfected = isInfected,
@@ -3703,6 +3715,7 @@ handlers.getPlayerDetails = function(args)
             isAsleep = get(player, "isAsleep"),
             isSneaking = get(player, "isSneaking"),
             isRunning = get(player, "isRunning"),
+            ping = getPlayerPing(player),
             stats = {},
             health = {}
         }
@@ -3810,7 +3823,8 @@ handlers.getAllPlayerDetails = function(args)
                     y = get(player, "getY"),
                     z = get(player, "getZ"),
                     accessLevel = get(player, "getAccessLevel"),
-                    isAlive = get(player, "isAlive")
+                    isAlive = get(player, "isAlive"),
+                    ping = getPlayerPing(player)
                 }
 
                 -- stats:get(CharacterStat.X), not named getters. See

@@ -104,7 +104,7 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
-describe('Players.tsx: roster health indicator (getAllPlayerDetails)', () => {
+describe('Players.tsx: roster telemetry (getAllPlayerDetails)', () => {
   it('is not fetched at all when the role lacks players.gm_tools, even though it holds players.view', async () => {
     mockCan = (capability) => capability === 'players.view'
     await setUpFixtures()
@@ -133,12 +133,14 @@ describe('Players.tsx: roster health indicator (getAllPlayerDetails)', () => {
     await setUpFixtures()
     getAllPlayerDetails.mockResolvedValue({
       success: true,
-      data: { players: [{ username: 'TestPlayer', displayName: 'TestPlayer', x: 0, y: 0, z: 0, accessLevel: 'user', isAlive: true, health: 42, isInfected: true }] },
+      data: { players: [{ username: 'TestPlayer', displayName: 'TestPlayer', x: 0, y: 0, z: 0, accessLevel: 'user', isAlive: true, health: 42, isInfected: true, ping: 137 }] },
     } as Awaited<ReturnType<typeof panelBridgeApi.getAllPlayerDetails>>)
 
     renderPlayers()
 
     await waitFor(() => expect(screen.getByTitle('Health: 42%')).toBeInTheDocument())
     expect(screen.getByText('42%')).toBeInTheDocument()
+    expect(screen.getByTitle('Ping: 137 ms')).toBeInTheDocument()
+    expect(screen.getByText('137 ms')).toBeInTheDocument()
   })
 })

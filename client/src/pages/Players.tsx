@@ -41,6 +41,7 @@ import {
   Skull,
   Moon,
   Thermometer,
+  Activity,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -525,7 +526,7 @@ export default function Players() {
   const [playerVitalsLoading, setPlayerVitalsLoading] = useState(false)
   const [playerVitalsError, setPlayerVitalsError] = useState<string | null>(null)
 
-  // At-a-glance roster health -- PanelBridge.getAllPlayerDetails (the
+  // At-a-glance roster telemetry -- PanelBridge.getAllPlayerDetails (the
   // PLURAL bulk endpoint, distinct from getPlayerDetails above, which is
   // one player at a time and only fetched for whoever is currently
   // selected). Nothing else on this page or elsewhere reads it: the roster
@@ -536,7 +537,7 @@ export default function Players() {
   // already uses but fired independently (own .then/.catch, not part of
   // any awaited Promise.all) so a slow or failing bridge call can never
   // delay the roster list itself from rendering.
-  const [rosterVitals, setRosterVitals] = useState<Record<string, { health?: number; isInfected?: boolean }>>({})
+  const [rosterVitals, setRosterVitals] = useState<Record<string, { health?: number; isInfected?: boolean; ping?: number }>>({})
 
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error ? error.message : fallback
@@ -629,14 +630,14 @@ export default function Players() {
   // (the route getAllPlayerDetails lives behind) actually requires, not the
   // players.view the base roster list itself uses. Silent no-op on failure
   // (bridge down, permission denied): the roster still renders fine without
-  // this, it just won't show the health/infection indicator.
+  // this, it just won't show the health/infection/ping indicators.
   const fetchRosterVitals = useCallback(async () => {
     try {
       const res = await panelBridgeApi.getAllPlayerDetails()
       if (!res.success || !res.data?.players) return
-      const next: Record<string, { health?: number; isInfected?: boolean }> = {}
+      const next: Record<string, { health?: number; isInfected?: boolean; ping?: number }> = {}
       for (const p of res.data.players) {
-        next[p.username] = { health: p.health, isInfected: p.isInfected }
+        next[p.username] = { health: p.health, isInfected: p.isInfected, ping: p.ping }
       }
       setRosterVitals(next)
     } catch {
@@ -1594,6 +1595,18 @@ export default function Players() {
                               )}
                             </div>
                             <div className="flex items-center gap-1">
+                              {typeof vitals?.ping === 'number' && Number.isFinite(vitals.ping) && (
+                                <span
+                                  className={cn(
+                                    'flex items-center gap-0.5 text-xs font-mono tabular-nums me-1',
+                                    vitals.ping < 80 ? 'text-emerald-500' : vitals.ping < 150 ? 'text-amber-500' : 'text-destructive',
+                                  )}
+                                  title={t('roster.rosterPingTooltip', { ping: Math.round(vitals.ping) })}
+                                >
+                                  <Activity className="w-3 h-3" />
+                                  {Math.round(vitals.ping)} ms
+                                </span>
+                              )}
                               {vitals && typeof vitals.health === 'number' && (
                                 <span
                                   className={cn(

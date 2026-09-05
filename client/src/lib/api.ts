@@ -2635,6 +2635,7 @@ export const panelBridgeApi = {
           z: number;
           accessLevel: string;
           isAlive: boolean;
+          ping?: number;
           hunger?: number;
           thirst?: number;
           fatigue?: number;
@@ -2657,6 +2658,7 @@ export const panelBridgeApi = {
         isAsleep?: boolean;
         isSneaking?: boolean;
         isRunning?: boolean;
+        ping?: number;
         // Any field PZ's Stats/BodyDamage couldn't read is OMITTED (not
         // defaulted to 0) -- see PanelBridge.lua's statGet(). Never treat an
         // absent key here as "0", only as "unknown".

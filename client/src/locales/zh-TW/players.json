@@ -53,6 +53,7 @@
     "onlineEmptyTitle": "暫無線上玩家",
     "onlineEmptyDesc": "玩家連線後將顯示在此處。",
     "rosterHealthTooltip": "生命值：{{health}}%",
+    "rosterPingTooltip": "延遲：{{ping}} ms",
     "seePreviouslySeen_one": "檢視 {{count}} 名此前出現過的玩家",
     "seePreviouslySeen_other": "檢視 {{count}} 名此前出現過的玩家",
     "reviewBanned_one": "檢視 {{count}} 個已封鎖的 SteamID",
