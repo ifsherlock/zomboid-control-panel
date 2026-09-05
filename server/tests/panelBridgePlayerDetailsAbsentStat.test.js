@@ -66,14 +66,25 @@ function FakePlayer:getDisplayName() return "Fielder" end
 function FakePlayer:getX() return 100 end
 function FakePlayer:getY() return 200 end
 function FakePlayer:getZ() return 0 end
+function FakePlayer:getOnlineID() return 7 end
 function FakePlayer:getAccessLevel() return "admin" end
 function FakePlayer:isAlive() return true end
 function FakePlayer:isAsleep() return false end
 function FakePlayer:isSneaking() return false end
 function FakePlayer:isRunning() return false end
-function FakePlayer:getPing() return 137 end
 function FakePlayer:getStats() return FakeStats end
 function FakePlayer:getBodyDamage() return FakeBodyDamage end
+
+FakeConnection = {}
+function FakeConnection:GetLastPing() return 137 end
+FakeGameServer = {}
+function FakeGameServer.getConnectionByPlayerOnlineID(onlineId) return FakeConnection end
+function FakeGameServer.getConnectionFromPlayer(player) return FakeConnection end
+luajava = {}
+function luajava.bindClass(name)
+  if name == "zombie.network.GameServer" then return FakeGameServer end
+  error("unexpected class binding: " .. tostring(name))
+end
 
 getPlayerByUsername = function(name)
   if name == "Fielder" then return FakePlayer end
@@ -113,6 +124,16 @@ describe('PanelBridge.lua getPlayerDetails/getAllPlayerDetails -- real stats via
     expect(result.data.health.overallBodyHealth).toBe(90);
   });
 
+  it('getPlayerDetails: resolves the connection by the player online ID before the identity-map fallback', () => {
+    const bridge = loadPanelBridge(LUA_PATH, STUBS + `
+function FakeGameServer.getConnectionFromPlayer(player) error("identity map should not be needed") end
+`);
+    const result = bridge.callHandler('getPlayerDetails', { username: 'Fielder' });
+
+    expect(result.ok).toBe(true);
+    expect(result.data.ping).toBe(137);
+  });
+
   it('getAllPlayerDetails: hunger/thirst/fatigue read via the real generic getter, row not degraded to {username, error}', () => {
     const bridge = loadPanelBridge(LUA_PATH, STUBS);
     const result = bridge.callHandler('getAllPlayerDetails', {});
@@ -144,9 +165,9 @@ FakeStatValues.HUNGER = nil
     expect(result.data.username).toBe('Fielder');
   });
 
-  it('getPlayerDetails: an unavailable or negative ping is honestly omitted', () => {
+  it('getPlayerDetails: an unavailable or negative connection ping is honestly omitted', () => {
     const bridge = loadPanelBridge(LUA_PATH, STUBS + `
-function FakePlayer:getPing() return -1 end
+function FakeConnection:GetLastPing() return -1 end
 `);
     const result = bridge.callHandler('getPlayerDetails', { username: 'Fielder' });
 

@@ -1,7 +1,7 @@
 ---@diagnostic disable: undefined-global, deprecated
 --[[
     PanelBridge - Server-side mod for Zomboid Control Panel
-    Version: 1.7.51
+    Version: 1.7.54
 
     This mod enables external control panel communication with the PZ server.
     Communication happens via JSON files in the server save folder.
@@ -479,7 +479,7 @@
 local json
 
 local PanelBridge = {
-    VERSION = "1.7.51",
+    VERSION = "1.7.54",
     PROTOCOL_VERSION = "queue-v1",
     CHECK_INTERVAL = 250, -- milliseconds (fast command polling)
     lastCheck = 0,
@@ -1289,12 +1289,65 @@ local function getPlayerByUsername(username)
     return nil
 end
 
--- Build 42 exposes the live per-player round-trip time on IsoPlayer. Keep
--- this optional so the bridge still returns the rest of a player row on an
--- older or future build where the getter is absent or not ready yet.
+-- IsoPlayer:getPing() is not the server's live connection measurement on B42:
+-- it reads IsoPlayer.ping, while the network ping monitor updates the
+-- UdpConnection object. Resolve GameServer through LuaJava because B42 does
+-- not expose GameServer as a normal Lua global. Keep this optional so a build
+-- that removes the binding still returns the rest of a player row honestly.
+local gameServerClass = nil
+local gameServerClassResolved = false
+
+local function getGameServerClass()
+    if gameServerClassResolved then
+        return gameServerClass
+    end
+
+    gameServerClassResolved = true
+    local ok, resolved = pcall(function()
+        if not luajava or not luajava.bindClass then
+            return nil
+        end
+        return luajava.bindClass("zombie.network.GameServer")
+    end)
+    if ok and resolved then
+        gameServerClass = resolved
+    end
+    return gameServerClass
+end
+
 local function getPlayerPing(player)
-    local ping = PanelBridge.tryGet(player, "getPing")
-    if type(ping) ~= "number" or ping < 0 then
+    if not player then return nil end
+
+    local gameServer = getGameServerClass()
+    if not gameServer then return nil end
+
+    -- Prefer the online-ID lookup. getConnectionFromPlayer() uses the
+    -- PlayerToAddressMap identity map, which can miss when the player object
+    -- came through a Lua collection wrapper. The online-ID lookup uses the
+    -- same IDToAddressMap that the server uses for incoming player packets.
+    local onlineId = PanelBridge.tryGet(player, "getOnlineID")
+    local connection = nil
+    if onlineId ~= nil then
+        local onlineIdOk, resolved = pcall(function()
+            return gameServer.getConnectionByPlayerOnlineID(onlineId)
+        end)
+        if onlineIdOk then
+            connection = resolved
+        end
+    end
+
+    -- Keep the direct player lookup as a compatibility fallback for builds
+    -- that do not expose the online-ID helper to Lua.
+    if not connection then
+        pcall(function()
+            connection = gameServer.getConnectionFromPlayer(player)
+        end)
+    end
+    if not connection then return nil end
+
+    local ping = PanelBridge.tryGet(connection, "GetLastPing")
+    ping = tonumber(ping)
+    if ping == nil or ping <= 0 then
         return nil
     end
     return math.floor(ping + 0.5)
